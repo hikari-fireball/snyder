@@ -12,13 +12,19 @@ INCDIR=src/include
 
 default: all
 
-all: $(BINDIR)/sudoku
+all: $(BINDIR)/snyder
 
-$(BINDIR)/sudoku: $(OBJDIR)/sudoku.o
-	$(CC) $^ -o $@ $(LIBS)
+$(OBJDIR):
+	mkdir $@
 
-$(OBJDIR)/sudoku.o: $(SRCDIR)/sudoku.cpp
-	$(CC) $(CFLAGS) $(INCLUDE) $^ -o $@
+$(BINDIR):
+	mkdir $@
+
+$(OBJDIR)/snyder.o: $(SRCDIR)/snyder.cpp $(OBJDIR)
+	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
+
+$(BINDIR)/snyder: $(OBJDIR)/snyder.o $(BINDIR)
+	$(CC) $< -o $@ $(LIBS)
 
 clean:
-	rm -f $(BINDIR)/* $(OBJDIR)/*
+	rm -r $(OBJDIR) $(BINDIR)
