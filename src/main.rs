@@ -88,6 +88,41 @@ impl Board {
         }
     }
 
+    fn simplify(&mut self, line: usize, column: usize, value: usize) -> bool {
+        for c in 0..BOARD_SIZE {
+            if c != column {
+                self.cells[line][c].remove(&value);
+                if self.cells[line][c].len() == 0 {
+                    return false;
+                }
+            }
+        }
+
+        for l in 0..BOARD_SIZE {
+            if l != line {
+                self.cells[l][column].remove(&value);
+                if self.cells[l][column].len() == 0 {
+                    return false;
+                }
+            }
+        }
+
+        for l in (line / BLOCK_SIZE) * BLOCK_SIZE..(line / BLOCK_SIZE) * BLOCK_SIZE + BLOCK_SIZE {
+            for c in
+                (column / BLOCK_SIZE) * BLOCK_SIZE..(column / BLOCK_SIZE) * BLOCK_SIZE + BLOCK_SIZE
+            {
+                if l != line || c != column {
+                    self.cells[l][c].remove(&value);
+                    if self.cells[l][c].len() == 0 {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        true
+    }
+
     fn offspring(&self) -> Vec<Board> {
         match self.most_constrained_variable() {
             Some((line, column)) => {
@@ -96,7 +131,9 @@ impl Board {
                     let mut child = self.clone();
                     child.cells[line][column].clear();
                     child.cells[line][column].insert(value);
-                    children.push(child);
+                    if child.simplify(line, column, value) {
+                        children.push(child);
+                    }
                 }
                 children
             }
@@ -111,32 +148,28 @@ fn main() {
         BLOCK_SIZE, BOARD_SIZE, CELL_DOMAIN
     );
 
-    let mut root = Board::new();
-    root.cells[0][0] = HashSet::from([1]);
-    root.cells[0][1] = HashSet::from([4]);
-    root.cells[0][2] = HashSet::from([3]);
-    root.cells[0][3] = HashSet::from([2]);
-    root.cells[1][0] = HashSet::from([3]);
-    root.cells[1][1] = HashSet::from([2]);
-    root.cells[1][2] = HashSet::from([1]);
-    root.cells[1][3] = HashSet::from([4]);
-    root.cells[2][0] = HashSet::from([4]);
-    root.cells[2][1] = HashSet::from([1]);
-    root.cells[2][2] = HashSet::from([2]);
-    root.cells[2][3] = HashSet::from([3]);
-    root.cells[3][0] = HashSet::from([2]);
-    root.cells[3][1] = HashSet::from([3]);
-    root.cells[3][2] = HashSet::from([4]);
-    root.cells[3][3] = HashSet::from([1]);
-    assert!(root.is_valid());
+    // let mut root = Board::new();
+    // root.cells[0][0] = HashSet::from([1]);
+    // root.cells[0][1] = HashSet::from([4]);
+    // root.cells[0][2] = HashSet::from([3]);
+    // root.cells[0][3] = HashSet::from([2]);
+    // root.cells[1][0] = HashSet::from([3]);
+    // root.cells[1][1] = HashSet::from([2]);
+    // root.cells[1][2] = HashSet::from([1]);
+    // root.cells[1][3] = HashSet::from([4]);
+    // root.cells[2][0] = HashSet::from([4]);
+    // root.cells[2][1] = HashSet::from([1]);
+    // root.cells[2][2] = HashSet::from([2]);
+    // root.cells[2][3] = HashSet::from([3]);
+    // root.cells[3][0] = HashSet::from([2]);
+    // root.cells[3][1] = HashSet::from([3]);
+    // root.cells[3][2] = HashSet::from([4]);
+    // root.cells[3][3] = HashSet::from([1]);
+    // assert!(root.is_valid());
 
     let root = Board::new();
     let mut stack: Vec<Board> = vec![root];
-    let mut i = 0;
     while let Some(parent) = stack.pop() {
-        if i % 1000000 == 0 {
-            println!("{:?}", i as f32 / 4294967296.0);
-        }
         for child in parent.offspring() {
             if child.is_valid() {
                 println!("{:?}", child);
@@ -144,6 +177,5 @@ fn main() {
                 stack.push(child);
             }
         }
-        i = i + 1;
     }
 }
