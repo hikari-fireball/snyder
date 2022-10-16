@@ -47,17 +47,19 @@ where
     }
 }
 
+pub struct InvalidStateError;
+
 pub trait Searchable<V, D> {
     fn check_constraints(&self) -> bool; // TODO return Result? valid, invalid, incomplete
-    fn simplify(&mut self, variable: &V, value: D) -> Result<(), ()>;
+    fn simplify(&mut self, variable: &V, value: D) -> Result<(), InvalidStateError>;
 }
 
 pub fn find_all<V, D>(state: State<V, D>)
 // TODO modify to return an iterator
 where
     State<V, D>: Searchable<V, D>,
-    D: Copy + Eq + Hash + std::fmt::Debug, // TODO remove Debug
-    V: Copy + Eq + Hash + std::fmt::Debug, // TODO remove Debug
+    D: Copy + Eq + Hash + std::fmt::Debug, // TODO remove Debug after converting into iterator
+    V: Copy + Eq + Hash + std::fmt::Debug, // TODO remove Debug after converting into iterator
 {
     let mut stack: Vec<State<V, D>> = vec![state];
     while let Some(parent) = stack.pop() {
