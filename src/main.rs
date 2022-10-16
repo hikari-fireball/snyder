@@ -1,5 +1,6 @@
 mod csp;
 
+use itertools::Itertools;
 use std::collections::HashSet;
 use std::fmt;
 use std::hash::Hash;
@@ -50,6 +51,11 @@ impl Sudoku {
 
 impl csp::Searchable<Position, SudokuDomainValue> for Sudoku {
     fn check_constraints(&self) -> bool {
+        // TODO: if the csp library sets an invalid value, we never know and keep searching.
+        // we are returning false if a cell is not determined or when values are repeated
+        // we never return false if we find any other invalid thing
+        // in other words, the csp module is exploring states that are invalid
+        // could we return a result? invalid -> Error, complete -> true, incomplete -> false?
         // TODO: imporove this code somehow
         for line in 0..BOARD_SIZE {
             let mut present: HashSet<SudokuDomainValue> = HashSet::new();
@@ -112,9 +118,36 @@ impl csp::Searchable<Position, SudokuDomainValue> for Sudoku {
     }
 }
 
+const NQUEEN_SIZE: usize = 4;
+
 type Nqueens = csp::State<Position, bool>;
 impl csp::Searchable<Position, bool> for Nqueens {
     fn check_constraints(&self) -> bool {
+        // TODO: move this to csp
+        if self.domains.iter().filter(|(_, v)| v.len() != 1).count() > 0 {
+            return false;
+        }
+
+        let queen_positions: Vec<&Position> = self
+            .domains
+            .iter()
+            .filter(|(_, v)| v.len() == 1 && v.contains(&true))
+            .map(|(k, _)| k)
+            .collect();
+
+        if queen_positions.len() != NQUEEN_SIZE {
+            return false;
+        }
+        for positions in queen_positions.iter().combinations(2) {
+            let x1 = positions[0].line as i32;
+            let y1 = positions[0].column as i32;
+            let x2 = positions[1].line as i32;
+            let y2 = positions[1].column as i32;
+            if x1 == x2 || y1 == y2 || x1 - y1 == x2 - y2 || x1 + y1 == x2 + y2 {
+                return false;
+            }
+        }
+
         true
     }
 
@@ -126,7 +159,9 @@ impl csp::Searchable<Position, bool> for Nqueens {
 fn main() {
     println!("nqueens (dummy)",);
     let nqueens: Nqueens = Nqueens::new(
-        &[Position { line: 0, column: 0 }],
+        &(0..NQUEEN_SIZE)
+            .flat_map(|j| (0..NQUEEN_SIZE).map(move |k| Position { line: j, column: k }))
+            .collect::<Vec<Position>>(),
         &HashSet::<bool>::from([true, false]),
     );
     csp::find_all(nqueens);
