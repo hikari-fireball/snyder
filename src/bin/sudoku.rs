@@ -20,9 +20,22 @@ trait SudokuExtra {
     const CELL_DOMAIN: RangeInclusive<Domain> = 1..=(Sudoku::BOARD_SIZE as Domain);
 
     fn adjacent_mut(&mut self, position: &Position) -> Vec<(&Position, &mut HashSet<Domain>)>;
+    fn iter(&self) -> std::collections::hash_map::Iter<'_, Position, HashSet<Domain>>;
+    fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, Position, HashSet<Domain>>;
+    fn domains_iter(&self) -> Box<dyn Iterator<Item = &HashSet<Domain>> + '_>;
 }
 
 impl SudokuExtra for Sudoku {
+    fn iter(&self) -> std::collections::hash_map::Iter<'_, Position, HashSet<Domain>> {
+        self.domains.iter()
+    }
+    fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, Position, HashSet<Domain>> {
+        self.domains.iter_mut()
+    }
+    fn domains_iter(&self) -> Box<dyn Iterator<Item = &HashSet<Domain>> + '_> {
+        Box::new(self.domains.iter().map(|(_, v)| v))
+    }
+
     fn adjacent_mut(&mut self, position: &Position) -> Vec<(&Position, &mut HashSet<Domain>)> {
         // TODO modify function to return an iterator std::iter::Iterator<Item=(V, Vec<D>)>
         let left_bracket = (position.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
