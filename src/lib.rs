@@ -36,6 +36,8 @@ where
                     let cell = child.domains.get_mut(position).unwrap();
                     cell.clear();
                     cell.insert(*value);
+                    // TODO if check_constraints -> children.push(child)
+                    // TODO hint the affected position to make it faster?
                     if child.simplify(position, *value).is_ok() {
                         children.push(child);
                     }

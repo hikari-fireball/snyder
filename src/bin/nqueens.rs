@@ -6,7 +6,7 @@ use std::hash::Hash;
 
 type NQueens = snyder::State<Position, bool>;
 
-#[derive(Clone, Eq, Hash, PartialEq, Copy, Debug)] // TODO is there a way to define all these traits somewhere else as a set?
+#[derive(Clone, Eq, Hash, PartialEq, Copy, Debug)]
 struct Position {
     line: usize,
     column: usize,

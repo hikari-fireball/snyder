@@ -19,28 +19,38 @@ trait SudokuExtra {
     const BOARD_SIZE: usize = Sudoku::BLOCK_SIZE.pow(2);
     const CELL_DOMAIN: RangeInclusive<Domain> = 1..=(Sudoku::BOARD_SIZE as Domain);
 
-    fn adjacent_mut(&mut self, position: &Position) -> Vec<(&Position, &mut HashSet<Domain>)>;
+    fn iter(&self) -> std::collections::hash_map::Iter<'_, Position, HashSet<Domain>>;
+    fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, Position, HashSet<Domain>>;
+    fn adjacent_mut<'a>(
+        &'a mut self,
+        position: &'a Position,
+    ) -> Box<dyn Iterator<Item = (&Position, &mut HashSet<Domain>)> + 'a>;
 }
 
 impl SudokuExtra for Sudoku {
-    fn adjacent_mut(&mut self, position: &Position) -> Vec<(&Position, &mut HashSet<Domain>)> {
-        // TODO modify function to return an iterator std::iter::Iterator<Item=(V, Vec<D>)>
+    fn iter(&self) -> std::collections::hash_map::Iter<'_, Position, HashSet<Domain>> {
+        self.domains.iter()
+    }
+    fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, Position, HashSet<Domain>> {
+        self.domains.iter_mut()
+    }
+    fn adjacent_mut<'a>(
+        &'a mut self,
+        position: &'a Position,
+    ) -> Box<dyn Iterator<Item = (&Position, &mut HashSet<Domain>)> + 'a> {
         let left_bracket = (position.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
         let right_bracket =
             (position.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
         let upper_bracket = (position.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
         let lower_bracket =
             (position.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
-        self.domains
-            .iter_mut()
-            .filter(|(k, _)| {
-                (k.line == position.line
-                    || k.column == position.column
-                    || ((k.line >= left_bracket && k.line < right_bracket)
-                        && (k.column >= upper_bracket && k.column < lower_bracket)))
-                    && (k.line != position.line || k.column != position.column)
-            })
-            .collect::<Vec<(&Position, &mut HashSet<Domain>)>>()
+        Box::new(self.domains.iter_mut().filter(move |(k, _)| {
+            (k.line == position.line
+                || k.column == position.column
+                || ((k.line >= left_bracket && k.line < right_bracket)
+                    && (k.column >= upper_bracket && k.column < lower_bracket)))
+                && (k.line != position.line || k.column != position.column)
+        }))
     }
 }
 
