@@ -19,8 +19,10 @@ trait SudokuExtra {
     const BOARD_SIZE: usize = Sudoku::BLOCK_SIZE.pow(2);
     const CELL_DOMAIN: RangeInclusive<Domain> = 1..=(Sudoku::BOARD_SIZE as Domain);
 
-    fn iter(&self) -> std::collections::hash_map::Iter<'_, Position, HashSet<Domain>>;
-    fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, Position, HashSet<Domain>>;
+    fn adjacent<'a>(
+        &'a self,
+        position: &'a Position,
+    ) -> Box<dyn Iterator<Item = (&Position, &HashSet<Domain>)> + 'a>;
     fn adjacent_mut<'a>(
         &'a mut self,
         position: &'a Position,
@@ -28,12 +30,25 @@ trait SudokuExtra {
 }
 
 impl SudokuExtra for Sudoku {
-    fn iter(&self) -> std::collections::hash_map::Iter<'_, Position, HashSet<Domain>> {
-        self.domains.iter()
+    fn adjacent<'a>(
+        &'a self,
+        position: &'a Position,
+    ) -> Box<dyn Iterator<Item = (&Position, &HashSet<Domain>)> + 'a> {
+        let left_bracket = (position.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
+        let right_bracket =
+            (position.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
+        let upper_bracket = (position.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
+        let lower_bracket =
+            (position.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
+        Box::new(self.domains.iter().filter(move |(k, _)| {
+            (k.line != position.line || k.column != position.column)
+                && (k.line == position.line
+                    || k.column == position.column
+                    || ((k.line >= left_bracket && k.line < right_bracket)
+                        && (k.column >= upper_bracket && k.column < lower_bracket)))
+        }))
     }
-    fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, Position, HashSet<Domain>> {
-        self.domains.iter_mut()
-    }
+
     fn adjacent_mut<'a>(
         &'a mut self,
         position: &'a Position,
@@ -45,68 +60,22 @@ impl SudokuExtra for Sudoku {
         let lower_bracket =
             (position.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
         Box::new(self.domains.iter_mut().filter(move |(k, _)| {
-            (k.line == position.line
-                || k.column == position.column
-                || ((k.line >= left_bracket && k.line < right_bracket)
-                    && (k.column >= upper_bracket && k.column < lower_bracket)))
-                && (k.line != position.line || k.column != position.column)
+            (k.line != position.line || k.column != position.column)
+                && (k.line == position.line
+                    || k.column == position.column
+                    || ((k.line >= left_bracket && k.line < right_bracket)
+                        && (k.column >= upper_bracket && k.column < lower_bracket)))
         }))
     }
 }
 
 impl snyder::Searchable<Position, Domain> for Sudoku {
-    fn check_constraints(&self) -> bool {
-        // TODO: if the snyder library sets an invalid value, we never know and keep searching.
-        // we are returning false if a cell is not determined or when values are repeated
-        // we never return false if we find any other invalid thing
-        // in other words, the snyder module is exploring states that are invalid
-        // could we return a result? invalid -> Error, complete -> true, incomplete -> false?
-        // TODO: imporove this code somehow
-        for line in 0..Sudoku::BOARD_SIZE {
-            let mut present: HashSet<Domain> = HashSet::new();
-            for column in 0..Sudoku::BOARD_SIZE {
-                let cell = self.domains.get(&Position { line, column }).unwrap();
-                if cell.len() != 1 {
-                    return false;
-                }
-                let single = cell.iter().next().unwrap();
-                if present.contains(single) {
-                    return false;
-                }
-                present.insert(*single);
-            }
-        }
-        for column in 0..Sudoku::BOARD_SIZE {
-            let mut present: HashSet<Domain> = HashSet::new();
-            for line in 0..Sudoku::BOARD_SIZE {
-                let cell = self.domains.get(&Position { line, column }).unwrap();
-                if cell.len() != 1 {
-                    return false;
-                }
-                let single = cell.iter().next().unwrap();
-                if present.contains(single) {
-                    return false;
-                }
-                present.insert(*single);
-            }
-        }
-        for line_offset in (0..Sudoku::BOARD_SIZE).step_by(Sudoku::BLOCK_SIZE as usize) {
-            for column_offset in (0..Sudoku::BOARD_SIZE).step_by(Sudoku::BLOCK_SIZE as usize) {
-                let mut present: HashSet<Domain> = HashSet::new();
-                for line in line_offset..(line_offset + Sudoku::BLOCK_SIZE) {
-                    for column in column_offset..(column_offset + Sudoku::BLOCK_SIZE) {
-                        let cell = self.domains.get(&Position { line, column }).unwrap();
-                        if cell.len() != 1 {
-                            return false;
-                        }
-                        let single = cell.iter().next().unwrap();
-                        if present.contains(single) {
-                            return false;
-                        }
-                        present.insert(*single);
-                    }
-                }
-            }
+    fn check_constraints(&self, position: &Position, value: Domain) -> bool {
+        if self
+            .adjacent(position)
+            .any(|(_, v)| v.len() == 1 && v.contains(&value))
+        {
+            return false;
         }
         true
     }
@@ -116,12 +85,19 @@ impl snyder::Searchable<Position, Domain> for Sudoku {
         position: &Position,
         value: Domain,
     ) -> Result<(), snyder::InvalidStateError> {
-        // TODO: [IMPORTANT] call simplify again when a cell becomes determined: if cell.remove() and cell.len() == 1
+        // TODO [IMPORTANT] decrementing self.undetermined here is ugly.
+        // TODO maybe also find a way to delete adjacent_mut too
+        let mut dec = false;
         for (_, domain) in self.adjacent_mut(position) {
-            domain.remove(&value);
+            if domain.remove(&value) && domain.len() == 1 {
+                dec = true;
+            }
             if domain.is_empty() {
                 return Err(snyder::InvalidStateError);
             }
+        }
+        if dec {
+            self.undetermined -= 1;
         }
         Ok(())
     }

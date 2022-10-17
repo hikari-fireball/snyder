@@ -1,6 +1,5 @@
 extern crate snyder;
 
-use itertools::Itertools;
 use std::collections::HashSet;
 use std::hash::Hash;
 
@@ -19,38 +18,44 @@ trait NQueenMeta {
 impl NQueenMeta for NQueens {}
 
 impl snyder::Searchable<Position, bool> for NQueens {
-    fn check_constraints(&self) -> bool {
-        // TODO: move this check to snyder?
-        if self.domains.iter().filter(|(_, v)| v.len() != 1).count() > 0 {
-            return false;
-        }
-        let queen_positions: Vec<&Position> = self
-            .domains
-            .iter()
-            .filter(|(_, v)| v.len() == 1 && v.contains(&true))
-            .map(|(k, _)| k)
-            .collect();
-        if queen_positions.len() != NQueens::SIZE {
-            return false;
-        }
-        for positions in queen_positions.iter().combinations(2) {
-            let x1 = positions[0].line as i32;
-            let y1 = positions[0].column as i32;
-            let x2 = positions[1].line as i32;
-            let y2 = positions[1].column as i32;
-            if x1 == x2 || y1 == y2 || x1 - y1 == x2 - y2 || x1 + y1 == x2 + y2 {
-                return false;
+    fn check_constraints(&self, position: &Position, value: bool) -> bool {
+        match value {
+            true => {
+                if self
+                    .domains
+                    .iter()
+                    .filter(|(_, v)| v.len() == 1 && v.contains(&true))
+                    .count()
+                    > NQueens::SIZE
+                {
+                    return false;
+                }
+                if self.domains.iter().any(|(k, v)| {
+                    v.len() == 1
+                        && v.contains(&true)
+                        && (k.line != position.line || k.column != position.column)
+                        && (k.line == position.line
+                            || k.column == position.column
+                            || k.line as i32 - k.column as i32
+                                == position.line as i32 - position.column as i32
+                            || k.line + k.column == position.line + position.column)
+                }) {
+                    return false;
+                }
+            }
+            false => {
+                if self
+                    .domains
+                    .iter()
+                    .filter(|(_, v)| v.len() == 1 && v.contains(&false))
+                    .count()
+                    > NQueens::SIZE * NQueens::SIZE - NQueens::SIZE
+                {
+                    return false;
+                }
             }
         }
         true
-    }
-
-    fn simplify(
-        &mut self,
-        _variable: &Position,
-        _value: bool,
-    ) -> Result<(), snyder::InvalidStateError> {
-        Ok(())
     }
 }
 

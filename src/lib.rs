@@ -5,6 +5,7 @@ use std::hash::Hash;
 #[derive(Debug, Clone)]
 pub struct State<V, D> {
     pub domains: HashMap<V, HashSet<D>>, // TODO make private
+    pub undetermined: usize,
 }
 
 impl<V, D> State<V, D>
@@ -16,6 +17,7 @@ where
     pub fn new(variables: &[V], domain: &HashSet<D>) -> State<V, D> {
         State {
             domains: variables.iter().map(|v| (*v, domain.clone())).collect(),
+            undetermined: variables.len(),
         }
     }
 
@@ -36,9 +38,10 @@ where
                     let cell = child.domains.get_mut(position).unwrap();
                     cell.clear();
                     cell.insert(*value);
-                    // TODO if check_constraints -> children.push(child)
-                    // TODO hint the affected position to make it faster?
-                    if child.simplify(position, *value).is_ok() {
+                    child.undetermined -= 1;
+                    if self.check_constraints(position, *value)
+                        && child.simplify(position, *value).is_ok()
+                    {
                         children.push(child);
                     }
                 }
@@ -52,8 +55,10 @@ where
 pub struct InvalidStateError;
 
 pub trait Searchable<V, D> {
-    fn check_constraints(&self) -> bool; // TODO return Result? valid, invalid, incomplete
-    fn simplify(&mut self, variable: &V, value: D) -> Result<(), InvalidStateError>;
+    fn check_constraints(&self, variable: &V, value: D) -> bool;
+    fn simplify(&mut self, _position: &V, _value: D) -> Result<(), InvalidStateError> {
+        Ok(())
+    }
 }
 
 pub fn find_all<V, D>(state: State<V, D>)
@@ -66,7 +71,7 @@ where
     let mut stack: Vec<State<V, D>> = vec![state];
     while let Some(parent) = stack.pop() {
         for child in parent.offspring() {
-            if child.check_constraints() {
+            if child.undetermined == 0 {
                 println!("{:?}", child);
             } else {
                 stack.push(child);
