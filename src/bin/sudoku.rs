@@ -15,7 +15,7 @@ struct Position {
 type Domain = u32;
 
 trait SudokuExtra {
-    const BLOCK_SIZE: usize = 2;
+    const BLOCK_SIZE: usize = 3;
     const BOARD_SIZE: usize = Sudoku::BLOCK_SIZE.pow(2);
     const CELL_DOMAIN: RangeInclusive<Domain> = 1..=(Sudoku::BOARD_SIZE as Domain);
 
@@ -85,19 +85,12 @@ impl snyder::Searchable<Position, Domain> for Sudoku {
         position: &Position,
         value: Domain,
     ) -> Result<(), snyder::InvalidStateError> {
-        // TODO [IMPORTANT] decrementing self.undetermined here is ugly.
         // TODO maybe also find a way to delete adjacent_mut too
-        let mut dec = false;
         for (_, domain) in self.adjacent_mut(position) {
-            if domain.remove(&value) && domain.len() == 1 {
-                dec = true;
-            }
+            domain.remove(&value);
             if domain.is_empty() {
                 return Err(snyder::InvalidStateError);
             }
-        }
-        if dec {
-            self.undetermined -= 1;
         }
         Ok(())
     }
