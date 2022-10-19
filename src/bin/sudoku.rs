@@ -102,5 +102,7 @@ fn main() {
         .collect::<Vec<Position>>();
     let domain = &Sudoku::CELL_DOMAIN.collect();
     let sudoku = Sudoku::new(variables, domain);
-    snyder::find_all(sudoku);
+    for state in sudoku.solution_iter() {
+        println!("{state:?}");
+    }
 }
