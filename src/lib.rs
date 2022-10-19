@@ -19,6 +19,10 @@ where
         }
     }
 
+    pub fn solution_iter(&self) -> SolutionIterator<V, D> {
+        SolutionIterator::new(self.clone())
+    }
+
     fn most_constrained_variable(&self) -> Option<&V> {
         self.domains
             .iter()
@@ -27,7 +31,7 @@ where
             .map(|(k, _)| k)
     }
 
-    fn is_complete(&self) -> bool {
+    fn is_solved(&self) -> bool {
         !self.domains.iter().any(|(_, v)| v.len() > 1)
     }
 
@@ -62,21 +66,35 @@ pub trait Searchable<V, D> {
     }
 }
 
-pub fn find_all<V, D>(state: State<V, D>)
-// TODO modify to return an iterator
+pub struct SolutionIterator<V, D> {
+    stack: Vec<State<V, D>>,
+}
+
+impl<V, D> SolutionIterator<V, D> {
+    fn new(state: State<V, D>) -> SolutionIterator<V, D> {
+        SolutionIterator { stack: vec![state] }
+    }
+}
+
+impl<V, D> Iterator for SolutionIterator<V, D>
 where
-    State<V, D>: Searchable<V, D>,
-    D: Copy + Eq + Hash + std::fmt::Debug, // TODO remove Debug after converting into iterator
-    V: Copy + Eq + Hash + std::fmt::Debug, // TODO remove Debug after converting into iterator
+    State<V, D>: Searchable<V, D> + Clone,
+    V: Eq + Hash + Copy,
+    D: Eq + Hash + Copy,
 {
-    let mut stack: Vec<State<V, D>> = vec![state];
-    while let Some(parent) = stack.pop() {
-        for child in parent.offspring() {
-            if child.is_complete() {
-                println!("{:?}", child);
-            } else {
-                stack.push(child);
+    type Item = State<V, D>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.stack.pop() {
+            Some(state) => {
+                if state.is_solved() {
+                    Some(state)
+                } else {
+                    self.stack.extend(state.offspring());
+                    self.next()
+                }
             }
+            None => None,
         }
     }
 }

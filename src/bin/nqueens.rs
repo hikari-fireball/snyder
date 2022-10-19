@@ -65,5 +65,7 @@ fn main() {
         .collect::<Vec<Position>>();
     let domain = &HashSet::<bool>::from([true, false]);
     let nqueens: NQueens = NQueens::new(variables, domain);
-    snyder::find_all(nqueens);
+    for state in nqueens.solution_iter() {
+        println!("{state:?}");
+    }
 }
