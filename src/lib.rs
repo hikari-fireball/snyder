@@ -4,7 +4,7 @@ use std::hash::Hash;
 
 #[derive(Debug, Clone)]
 pub struct State<V, D> {
-    pub domains: HashMap<V, HashSet<D>>, // TODO make private
+    domains: HashMap<V, HashSet<D>>,
 }
 
 impl<V, D> State<V, D>
@@ -17,6 +17,14 @@ where
         State {
             domains: variables.iter().map(|v| (*v, domain.clone())).collect(),
         }
+    }
+
+    pub fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = (&V, &HashSet<D>)> + 'a> {
+        Box::new(self.domains.iter())
+    }
+
+    pub fn iter_mut<'a>(&'a mut self) -> Box<dyn Iterator<Item = (&V, &mut HashSet<D>)> + 'a> {
+        Box::new(self.domains.iter_mut())
     }
 
     pub fn solution_iter(&self) -> SolutionIterator<V, D> {
