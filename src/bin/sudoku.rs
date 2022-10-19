@@ -1,6 +1,5 @@
 extern crate snyder;
 
-use std::collections::HashSet;
 use std::hash::Hash;
 use std::ops::RangeInclusive;
 
@@ -12,68 +11,38 @@ struct Position {
     column: usize,
 }
 
+impl Position {
+    fn is_adjacent(&self, other: &Position) -> bool {
+        let left_bracket = (self.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
+        let right_bracket =
+            (self.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
+        let upper_bracket = (self.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
+        let lower_bracket =
+            (self.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
+
+        (other.line != self.line || other.column != self.column)
+            && (other.line == self.line
+                || other.column == self.column
+                || ((other.line >= left_bracket && other.line < right_bracket)
+                    && (other.column >= upper_bracket && other.column < lower_bracket)))
+    }
+}
+
 type Domain = u32;
 
 trait SudokuExtra {
-    const BLOCK_SIZE: usize = 3;
+    const BLOCK_SIZE: usize = 2;
     const BOARD_SIZE: usize = Sudoku::BLOCK_SIZE.pow(2);
     const CELL_DOMAIN: RangeInclusive<Domain> = 1..=(Sudoku::BOARD_SIZE as Domain);
-
-    fn adjacent<'a>(
-        &'a self,
-        position: &'a Position,
-    ) -> Box<dyn Iterator<Item = (&Position, &HashSet<Domain>)> + 'a>;
-    fn adjacent_mut<'a>(
-        &'a mut self,
-        position: &'a Position,
-    ) -> Box<dyn Iterator<Item = (&Position, &mut HashSet<Domain>)> + 'a>;
 }
 
-impl SudokuExtra for Sudoku {
-    fn adjacent<'a>(
-        &'a self,
-        position: &'a Position,
-    ) -> Box<dyn Iterator<Item = (&Position, &HashSet<Domain>)> + 'a> {
-        let left_bracket = (position.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
-        let right_bracket =
-            (position.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
-        let upper_bracket = (position.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
-        let lower_bracket =
-            (position.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
-        Box::new(self.domains.iter().filter(move |(k, _)| {
-            (k.line != position.line || k.column != position.column)
-                && (k.line == position.line
-                    || k.column == position.column
-                    || ((k.line >= left_bracket && k.line < right_bracket)
-                        && (k.column >= upper_bracket && k.column < lower_bracket)))
-        }))
-    }
-
-    fn adjacent_mut<'a>(
-        &'a mut self,
-        position: &'a Position,
-    ) -> Box<dyn Iterator<Item = (&Position, &mut HashSet<Domain>)> + 'a> {
-        let left_bracket = (position.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
-        let right_bracket =
-            (position.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
-        let upper_bracket = (position.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
-        let lower_bracket =
-            (position.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
-        Box::new(self.domains.iter_mut().filter(move |(k, _)| {
-            (k.line != position.line || k.column != position.column)
-                && (k.line == position.line
-                    || k.column == position.column
-                    || ((k.line >= left_bracket && k.line < right_bracket)
-                        && (k.column >= upper_bracket && k.column < lower_bracket)))
-        }))
-    }
-}
+impl SudokuExtra for Sudoku {}
 
 impl snyder::Searchable<Position, Domain> for Sudoku {
     fn check_constraints(&self, position: &Position, value: Domain) -> bool {
         if self
-            .adjacent(position)
-            .any(|(_, v)| v.len() == 1 && v.contains(&value))
+            .iter()
+            .any(|(k, v)| k.is_adjacent(position) && v.len() == 1 && v.contains(&value))
         {
             return false;
         }
@@ -85,8 +54,7 @@ impl snyder::Searchable<Position, Domain> for Sudoku {
         position: &Position,
         value: Domain,
     ) -> Result<(), snyder::InvalidStateError> {
-        // TODO maybe also find a way to delete adjacent_mut too
-        for (_, domain) in self.adjacent_mut(position) {
+        for (_, domain) in self.iter_mut().filter(|(k, _)| k.is_adjacent(position)) {
             domain.remove(&value);
             if domain.is_empty() {
                 return Err(snyder::InvalidStateError);

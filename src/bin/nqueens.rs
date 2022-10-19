@@ -22,7 +22,6 @@ impl snyder::Searchable<Position, bool> for NQueens {
         match value {
             true => {
                 if self
-                    .domains
                     .iter()
                     .filter(|(_, v)| v.len() == 1 && v.contains(&true))
                     .count()
@@ -30,7 +29,7 @@ impl snyder::Searchable<Position, bool> for NQueens {
                 {
                     return false;
                 }
-                if self.domains.iter().any(|(k, v)| {
+                if self.iter().any(|(k, v)| {
                     v.len() == 1
                         && v.contains(&true)
                         && (k.line != position.line || k.column != position.column)
@@ -45,7 +44,6 @@ impl snyder::Searchable<Position, bool> for NQueens {
             }
             false => {
                 if self
-                    .domains
                     .iter()
                     .filter(|(_, v)| v.len() == 1 && v.contains(&false))
                     .count()
