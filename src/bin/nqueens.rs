@@ -12,7 +12,7 @@ struct Position {
 }
 
 trait NQueenMeta {
-    const SIZE: usize = 4;
+    const SIZE: usize = 8;
 }
 
 impl NQueenMeta for NQueens {}
@@ -21,18 +21,13 @@ impl snyder::Searchable<Position, bool> for NQueens {
     fn check_constraints(&self, position: &Position, value: bool) -> bool {
         match value {
             true => {
-                if self
-                    .iter()
-                    .filter(|(_, v)| v.len() == 1 && v.contains(&true))
-                    .count()
-                    > NQueens::SIZE
-                {
+                // there are no more than SIZE queens
+                if self.determined().filter(|(_, v)| **v).count() > NQueens::SIZE {
                     return false;
                 }
-                if self.iter().any(|(k, v)| {
-                    v.len() == 1
-                        && v.contains(&true)
-                        && (k.line != position.line || k.column != position.column)
+                // the new queen is not in check
+                if self.determined().any(|(k, v)| {
+                    *v && k != position
                         && (k.line == position.line
                             || k.column == position.column
                             || k.line as i32 - k.column as i32
@@ -43,10 +38,8 @@ impl snyder::Searchable<Position, bool> for NQueens {
                 }
             }
             false => {
-                if self
-                    .iter()
-                    .filter(|(_, v)| v.len() == 1 && v.contains(&false))
-                    .count()
+                // there are no more than SIZE² - SIZE empty squares
+                if self.determined().filter(|(_, v)| !(**v)).count()
                     > NQueens::SIZE * NQueens::SIZE - NQueens::SIZE
                 {
                     return false;
@@ -54,6 +47,20 @@ impl snyder::Searchable<Position, bool> for NQueens {
             }
         }
         true
+    }
+
+    fn simplify(&mut self, position: &Position, value: bool) {
+        if value {
+            for (_, value_set) in self.undetermined_mut().filter(|(k, _)| {
+                k.line == position.line
+                    || k.column == position.column
+                    || k.line as i32 - k.column as i32
+                        == position.line as i32 - position.column as i32
+                    || k.line + k.column == position.line + position.column
+            }) {
+                value_set.remove(&value);
+            }
+        }
     }
 }
 
