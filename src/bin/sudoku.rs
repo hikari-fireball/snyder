@@ -31,7 +31,7 @@ impl Position {
 type Domain = u32;
 
 trait SudokuExtra {
-    const BLOCK_SIZE: usize = 2;
+    const BLOCK_SIZE: usize = 3;
     const BOARD_SIZE: usize = Sudoku::BLOCK_SIZE.pow(2);
     const CELL_DOMAIN: RangeInclusive<Domain> = 1..=(Sudoku::BOARD_SIZE as Domain);
 }
@@ -41,26 +41,21 @@ impl SudokuExtra for Sudoku {}
 impl snyder::Searchable<Position, Domain> for Sudoku {
     fn check_constraints(&self, position: &Position, value: Domain) -> bool {
         if self
-            .iter()
-            .any(|(k, v)| k.is_adjacent(position) && v.len() == 1 && v.contains(&value))
+            .determined()
+            .any(|(k, v)| k.is_adjacent(position) && *v == value)
         {
             return false;
         }
         true
     }
 
-    fn simplify(
-        &mut self,
-        position: &Position,
-        value: Domain,
-    ) -> Result<(), snyder::InvalidStateError> {
-        for (_, domain) in self.iter_mut().filter(|(k, _)| k.is_adjacent(position)) {
-            domain.remove(&value);
-            if domain.is_empty() {
-                return Err(snyder::InvalidStateError);
-            }
+    fn simplify(&mut self, position: &Position, value: Domain) {
+        for (_, value_set) in self
+            .undetermined_mut()
+            .filter(|(k, _)| k.is_adjacent(position))
+        {
+            value_set.remove(&value);
         }
-        Ok(())
     }
 }
 
