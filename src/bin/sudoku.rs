@@ -3,6 +3,10 @@ extern crate snyder;
 use std::hash::Hash;
 use std::ops::RangeInclusive;
 
+const BLOCK_SIZE: usize = 3;
+const BOARD_SIZE: usize = BLOCK_SIZE.pow(2);
+const CELL_DOMAIN: RangeInclusive<Domain> = 1..=(BOARD_SIZE as Domain);
+
 type Sudoku = snyder::State<Position, Domain>;
 
 #[derive(Clone, Eq, Hash, PartialEq, Copy, Debug)]
@@ -13,12 +17,10 @@ struct Position {
 
 impl Position {
     fn is_adjacent(&self, other: &Position) -> bool {
-        let left_bracket = (self.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
-        let right_bracket =
-            (self.line / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
-        let upper_bracket = (self.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE;
-        let lower_bracket =
-            (self.column / Sudoku::BLOCK_SIZE) * Sudoku::BLOCK_SIZE + Sudoku::BLOCK_SIZE;
+        let left_bracket = (self.line / BLOCK_SIZE) * BLOCK_SIZE;
+        let right_bracket = (self.line / BLOCK_SIZE) * BLOCK_SIZE + BLOCK_SIZE;
+        let upper_bracket = (self.column / BLOCK_SIZE) * BLOCK_SIZE;
+        let lower_bracket = (self.column / BLOCK_SIZE) * BLOCK_SIZE + BLOCK_SIZE;
 
         (other.line != self.line || other.column != self.column)
             && (other.line == self.line
@@ -29,14 +31,6 @@ impl Position {
 }
 
 type Domain = u32;
-
-trait SudokuExtra {
-    const BLOCK_SIZE: usize = 3;
-    const BOARD_SIZE: usize = Sudoku::BLOCK_SIZE.pow(2);
-    const CELL_DOMAIN: RangeInclusive<Domain> = 1..=(Sudoku::BOARD_SIZE as Domain);
-}
-
-impl SudokuExtra for Sudoku {}
 
 impl snyder::Searchable<Position, Domain> for Sudoku {
     fn check_constraints(&self, position: &Position, value: Domain) -> bool {
@@ -60,10 +54,10 @@ impl snyder::Searchable<Position, Domain> for Sudoku {
 }
 
 fn main() {
-    let variables = &(0..Sudoku::BOARD_SIZE)
-        .flat_map(|j| (0..Sudoku::BOARD_SIZE).map(move |k| Position { line: j, column: k }))
+    let variables = &(0..BOARD_SIZE)
+        .flat_map(|j| (0..BOARD_SIZE).map(move |k| Position { line: j, column: k }))
         .collect::<Vec<Position>>();
-    let domain = &Sudoku::CELL_DOMAIN.collect();
+    let domain = &CELL_DOMAIN.collect();
     let sudoku = Sudoku::new(variables, domain);
     for state in sudoku.solution_iter() {
         println!("{state:?}");

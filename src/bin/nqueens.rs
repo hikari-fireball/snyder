@@ -3,6 +3,8 @@ extern crate snyder;
 use std::collections::HashSet;
 use std::hash::Hash;
 
+const BOARD_SIZE: usize = 8;
+
 type NQueens = snyder::State<Position, bool>;
 
 #[derive(Clone, Eq, Hash, PartialEq, Copy, Debug)]
@@ -11,18 +13,12 @@ struct Position {
     column: usize,
 }
 
-trait NQueenMeta {
-    const SIZE: usize = 8;
-}
-
-impl NQueenMeta for NQueens {}
-
 impl snyder::Searchable<Position, bool> for NQueens {
     fn check_constraints(&self, position: &Position, value: bool) -> bool {
         match value {
             true => {
                 // there are no more than SIZE queens
-                if self.determined().filter(|(_, v)| **v).count() > NQueens::SIZE {
+                if self.determined().filter(|(_, v)| **v).count() > BOARD_SIZE {
                     return false;
                 }
                 // the new queen is not in check
@@ -38,9 +34,9 @@ impl snyder::Searchable<Position, bool> for NQueens {
                 }
             }
             false => {
-                // there are no more than SIZE² - SIZE empty squares
+                // there are no more than BOARD_SIZE² - BOARD_SIZE empty squares
                 if self.determined().filter(|(_, v)| !(**v)).count()
-                    > NQueens::SIZE * NQueens::SIZE - NQueens::SIZE
+                    > BOARD_SIZE * BOARD_SIZE - BOARD_SIZE
                 {
                     return false;
                 }
@@ -65,8 +61,8 @@ impl snyder::Searchable<Position, bool> for NQueens {
 }
 
 fn main() {
-    let variables = &(0..NQueens::SIZE)
-        .flat_map(|j| (0..NQueens::SIZE).map(move |k| Position { line: j, column: k }))
+    let variables = &(0..BOARD_SIZE)
+        .flat_map(|j| (0..BOARD_SIZE).map(move |k| Position { line: j, column: k }))
         .collect::<Vec<Position>>();
     let domain = &HashSet::<bool>::from([true, false]);
     let nqueens: NQueens = NQueens::new(variables, domain);
