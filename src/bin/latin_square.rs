@@ -10,29 +10,29 @@ struct Position {
 }
 
 // Define the domain type
-type Number = char;
+type Symbol = u32;
 
 // Define the problem using variable and domain type
-type LatinSquare = snyder::State<Position, Number>;
+type LatinSquare = snyder::State<Position, Symbol>;
 
-impl snyder::Searchable<Position, Number> for LatinSquare {
+impl snyder::Searchable<Position, Symbol> for LatinSquare {
     // Check for the problem constraints
-    fn check_constraints(&self, position: &Position, number: Number) -> bool {
-        // there currently placed number is different from all other numbers on the same line or
+    fn check_constraints(&self, position: &Position, symbol: Symbol) -> bool {
+        // the currently placed symbol is different from all other symbol on the same line or
         // column
         !self
             .determined()
-            .any(|(k, v)| k != position && (k.x == position.x || k.y == position.y) && *v == number)
+            .any(|(k, v)| k != position && (k.x == position.x || k.y == position.y) && *v == symbol)
     }
 
     // [OPTIONAL] Simplify the state after the system has determined a value
-    fn simplify(&mut self, position: &Position, number: Number) {
-        // the currently placed number removes the possibilty of an identiccal value on the same
+    fn simplify(&mut self, position: &Position, symbol: Symbol) {
+        // the currently placed symbol removes the possibilty of an identiccal value on the same
         // line or column
-        for (_, number_set) in self.undetermined_mut().filter(|(k, v)| {
-            *k != position && (k.x == position.x || k.y == position.y) && v.contains(&number)
+        for (_, symbol_set) in self.undetermined_mut().filter(|(k, v)| {
+            *k != position && (k.x == position.x || k.y == position.y) && v.contains(&symbol)
         }) {
-            number_set.remove(&number);
+            symbol_set.remove(&symbol);
         }
     }
 }
@@ -51,7 +51,7 @@ fn main() {
         Position { x: 2, y: 2 },
     ];
     // Define the set of domains
-    let domain_set = HashSet::from(['A', 'B', 'C']);
+    let domain_set = HashSet::from([1, 2, 3]);
     // Iterate the solutions
     let latin_square = LatinSquare::new(&variable_set, &domain_set);
     for state in latin_square.solution_iter() {
