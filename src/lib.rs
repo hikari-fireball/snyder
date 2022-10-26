@@ -2,6 +2,8 @@ use core::hash::Hash;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+/// A suboptimal backtracking Constraint Satisfaction Problem solver
+
 #[derive(Debug, Clone)]
 pub enum Domain<T> {
     Determined(T),
@@ -19,6 +21,7 @@ where
     V: Eq + Hash + Copy,
     D: Eq + Hash + Copy,
 {
+    #[inline]
     pub fn new(variables: &[V], domain: &HashSet<D>) -> Self {
         return Self {
             domains: variables
@@ -28,10 +31,12 @@ where
         };
     }
 
+    #[inline]
     pub fn iter<'state>(&'state self) -> impl Iterator<Item = (&V, &Domain<D>)> + 'state {
         return self.domains.iter();
     }
 
+    #[inline]
     pub fn iter_mut<'state>(
         &'state mut self,
     ) -> impl Iterator<Item = (&V, &mut Domain<D>)> + 'state {
@@ -39,26 +44,26 @@ where
     }
 
     pub fn determined<'state>(&'state self) -> impl Iterator<Item = (&V, &D)> + 'state {
-        self.domains.iter().filter_map(|(k, v)| match v {
-            Domain::Determined(v) => return Some((k, v)),
-            _ => return None,
-        })
+        return self.domains.iter().filter_map(|(k, v)| match v {
+            Domain::Determined(d) => Some((k, d)),
+            _ => None,
+        });
     }
 
     pub fn undetermined<'state>(&'state self) -> impl Iterator<Item = (&V, &HashSet<D>)> + 'state {
-        self.domains.iter().filter_map(|(k, v)| match v {
-            Domain::Undetermined(v) => return Some((k, v)),
-            _ => return None,
-        })
+        return self.domains.iter().filter_map(|(k, v)| match v {
+            Domain::Undetermined(u) => Some((k, u)),
+            _ => None,
+        });
     }
 
     pub fn undetermined_mut<'state>(
         &'state mut self,
     ) -> impl Iterator<Item = (&V, &mut HashSet<D>)> + 'state {
-        self.domains.iter_mut().filter_map(|(k, v)| match v {
-            Domain::Undetermined(v) => return Some((k, v)),
-            _ => return None,
-        })
+        return self.domains.iter_mut().filter_map(|(k, v)| match v {
+            Domain::Undetermined(u) => Some((k, u)),
+            _ => None,
+        });
     }
 
     #[inline]
@@ -127,10 +132,9 @@ where
             Some(state) => {
                 if state.is_solved() {
                     return Some(state);
-                } else {
-                    self.stack.extend(state.offspring());
-                    return self.next();
                 }
+                self.stack.extend(state.offspring());
+                self.next()
             }
             None => None,
         }
