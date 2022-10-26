@@ -28,31 +28,29 @@ where
         }
     }
 
-    pub fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = (&V, &Domain<D>)> + 'a> {
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (&V, &Domain<D>)> + 'a {
         Box::new(self.domains.iter())
     }
 
-    pub fn iter_mut<'a>(&'a mut self) -> Box<dyn Iterator<Item = (&V, &mut Domain<D>)> + 'a> {
+    pub fn iter_mut<'a>(&'a mut self) -> impl Iterator<Item = (&V, &mut Domain<D>)> + 'a {
         Box::new(self.domains.iter_mut())
     }
 
-    pub fn determined<'a>(&'a self) -> Box<dyn Iterator<Item = (&V, &D)> + 'a> {
+    pub fn determined<'a>(&'a self) -> impl Iterator<Item = (&V, &D)> + 'a {
         Box::new(self.domains.iter().filter_map(|(k, v)| match v {
             Domain::Determined(v) => Some((k, v)),
             _ => None,
         }))
     }
 
-    pub fn undetermined<'a>(&'a self) -> Box<dyn Iterator<Item = (&V, &HashSet<D>)> + 'a> {
+    pub fn undetermined<'a>(&'a self) -> impl Iterator<Item = (&V, &HashSet<D>)> + 'a {
         Box::new(self.domains.iter().filter_map(|(k, v)| match v {
             Domain::Undetermined(v) => Some((k, v)),
             _ => None,
         }))
     }
 
-    pub fn undetermined_mut<'a>(
-        &'a mut self,
-    ) -> Box<dyn Iterator<Item = (&V, &mut HashSet<D>)> + 'a> {
+    pub fn undetermined_mut<'a>(&'a mut self) -> impl Iterator<Item = (&V, &mut HashSet<D>)> + 'a {
         Box::new(self.domains.iter_mut().filter_map(|(k, v)| match v {
             Domain::Undetermined(v) => Some((k, v)),
             _ => None,
