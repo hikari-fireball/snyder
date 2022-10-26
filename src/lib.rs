@@ -1,6 +1,8 @@
+use core::hash::Hash;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::hash::Hash;
+
+/// A suboptimal backtracking Constraint Satisfaction Problem solver
 
 #[derive(Debug, Clone)]
 pub enum Domain<T> {
@@ -15,67 +17,74 @@ pub struct State<V, D> {
 
 impl<V, D> State<V, D>
 where
-    State<V, D>: Searchable<V, D> + Clone,
+    Self: Searchable<V, D> + Clone,
     V: Eq + Hash + Copy,
     D: Eq + Hash + Copy,
 {
-    pub fn new(variables: &[V], domain: &HashSet<D>) -> State<V, D> {
-        State {
+    #[inline]
+    pub fn new(variables: &[V], domain: &HashSet<D>) -> Self {
+        return Self {
             domains: variables
                 .iter()
                 .map(|v| (*v, Domain::Undetermined(domain.clone())))
                 .collect(),
-        }
+        };
     }
 
-    pub fn iter<'a>(&'a self) -> Box<dyn Iterator<Item = (&V, &Domain<D>)> + 'a> {
-        Box::new(self.domains.iter())
+    #[inline]
+    pub fn iter<'state>(&'state self) -> impl Iterator<Item = (&V, &Domain<D>)> + 'state {
+        return self.domains.iter();
     }
 
-    pub fn iter_mut<'a>(&'a mut self) -> Box<dyn Iterator<Item = (&V, &mut Domain<D>)> + 'a> {
-        Box::new(self.domains.iter_mut())
+    #[inline]
+    pub fn iter_mut<'state>(
+        &'state mut self,
+    ) -> impl Iterator<Item = (&V, &mut Domain<D>)> + 'state {
+        return self.domains.iter_mut();
     }
 
-    pub fn determined<'a>(&'a self) -> Box<dyn Iterator<Item = (&V, &D)> + 'a> {
-        Box::new(self.domains.iter().filter_map(|(k, v)| match v {
-            Domain::Determined(v) => Some((k, v)),
+    pub fn determined<'state>(&'state self) -> impl Iterator<Item = (&V, &D)> + 'state {
+        return self.domains.iter().filter_map(|(k, v)| match v {
+            Domain::Determined(d) => Some((k, d)),
             _ => None,
-        }))
+        });
     }
 
-    pub fn undetermined<'a>(&'a self) -> Box<dyn Iterator<Item = (&V, &HashSet<D>)> + 'a> {
-        Box::new(self.domains.iter().filter_map(|(k, v)| match v {
-            Domain::Undetermined(v) => Some((k, v)),
+    pub fn undetermined<'state>(&'state self) -> impl Iterator<Item = (&V, &HashSet<D>)> + 'state {
+        return self.domains.iter().filter_map(|(k, v)| match v {
+            Domain::Undetermined(u) => Some((k, u)),
             _ => None,
-        }))
+        });
     }
 
-    pub fn undetermined_mut<'a>(
-        &'a mut self,
-    ) -> Box<dyn Iterator<Item = (&V, &mut HashSet<D>)> + 'a> {
-        Box::new(self.domains.iter_mut().filter_map(|(k, v)| match v {
-            Domain::Undetermined(v) => Some((k, v)),
+    pub fn undetermined_mut<'state>(
+        &'state mut self,
+    ) -> impl Iterator<Item = (&V, &mut HashSet<D>)> + 'state {
+        return self.domains.iter_mut().filter_map(|(k, v)| match v {
+            Domain::Undetermined(u) => Some((k, u)),
             _ => None,
-        }))
+        });
     }
 
+    #[inline]
     pub fn solution_iter(&self) -> SolutionIterator<V, D> {
-        SolutionIterator::new(self.clone())
+        return SolutionIterator::new(self.clone());
     }
 
     fn most_constrained_variable(&self) -> Option<(&V, &HashSet<D>)> {
-        self.undetermined()
-            .min_by(|(_, v1), (_, v2)| v1.len().cmp(&v2.len()))
+        return self
+            .undetermined()
+            .min_by(|(_, v1), (_, v2)| v1.len().cmp(&v2.len()));
     }
 
     fn is_solved(&self) -> bool {
-        !self.undetermined().any(|_| true)
+        return !self.undetermined().any(|_| true);
     }
 
-    fn offspring(&self) -> Vec<State<V, D>> {
+    fn offspring(&self) -> Vec<Self> {
         match self.most_constrained_variable() {
             Some((variable, value_set)) => {
-                let mut children: Vec<State<V, D>> = vec![];
+                let mut children: Vec<Self> = vec![];
                 for value in value_set {
                     let mut child = self.clone();
                     child.domains.insert(*variable, Domain::Determined(*value));
@@ -84,9 +93,9 @@ where
                         children.push(child);
                     }
                 }
-                children
+                return children;
             }
-            None => Vec::new(),
+            None => return Vec::new(),
         }
     }
 }
@@ -95,6 +104,7 @@ pub struct InvalidStateError;
 
 pub trait Searchable<V, D> {
     fn check_constraints(&self, variable: &V, value: D) -> bool;
+    #[inline]
     fn simplify(&mut self, _variable: &V, _value: D) {}
 }
 
@@ -103,8 +113,8 @@ pub struct SolutionIterator<V, D> {
 }
 
 impl<V, D> SolutionIterator<V, D> {
-    fn new(state: State<V, D>) -> SolutionIterator<V, D> {
-        SolutionIterator { stack: vec![state] }
+    fn new(state: State<V, D>) -> Self {
+        Self { stack: vec![state] }
     }
 }
 
@@ -116,15 +126,15 @@ where
 {
     type Item = State<V, D>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         match self.stack.pop() {
             Some(state) => {
                 if state.is_solved() {
-                    Some(state)
-                } else {
-                    self.stack.extend(state.offspring());
-                    self.next()
+                    return Some(state);
                 }
+                self.stack.extend(state.offspring());
+                self.next()
             }
             None => None,
         }
