@@ -132,7 +132,7 @@ where
                     return self.next();
                 }
             }
-            None => return None,
+            None => None,
         }
     }
 }
