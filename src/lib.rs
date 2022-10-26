@@ -15,12 +15,12 @@ pub struct State<V, D> {
 
 impl<V, D> State<V, D>
 where
-    State<V, D>: Searchable<V, D> + Clone,
+    Self: Searchable<V, D> + Clone,
     V: Eq + Hash + Copy,
     D: Eq + Hash + Copy,
 {
-    pub fn new(variables: &[V], domain: &HashSet<D>) -> State<V, D> {
-        State {
+    pub fn new(variables: &[V], domain: &HashSet<D>) -> Self {
+        Self {
             domains: variables
                 .iter()
                 .map(|v| (*v, Domain::Undetermined(domain.clone())))
@@ -74,10 +74,10 @@ where
         !self.undetermined().any(|_| true)
     }
 
-    fn offspring(&self) -> Vec<State<V, D>> {
+    fn offspring(&self) -> Vec<Self> {
         match self.most_constrained_variable() {
             Some((variable, value_set)) => {
-                let mut children: Vec<State<V, D>> = vec![];
+                let mut children: Vec<Self> = vec![];
                 for value in value_set {
                     let mut child = self.clone();
                     child.domains.insert(*variable, Domain::Determined(*value));
@@ -105,8 +105,8 @@ pub struct SolutionIterator<V, D> {
 }
 
 impl<V, D> SolutionIterator<V, D> {
-    fn new(state: State<V, D>) -> SolutionIterator<V, D> {
-        SolutionIterator { stack: vec![state] }
+    fn new(state: State<V, D>) -> Self {
+        Self { stack: vec![state] }
     }
 }
 
